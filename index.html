@@ -439,4 +439,290 @@
         card.className = "card";
         card.setAttribute("data-id", p.id);
         card.innerHTML = `
-          <d
+          <div class="badge">${p.category || 'item'}</div>
+          <div class="img">${p.img ? `<img src="${p.img}" alt="${p.name}">` : '<svg width="72" height="72" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#eef6ff"/></svg>'}</div>
+          <h3>${p.name}</h3>
+          <div class="meta">
+            <div class="price">${fmt(p.price)}</div>
+            <div class="small muted">${p.weight}</div>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" onclick="addToCart(${p.id})">Add</button>
+            ${currentUser && currentUser.role === "admin" ? `<button class="btn btn-ghost" onclick="openEdit(${p.id})">Edit</button>
+            <button class="btn" style="background:transparent;color:var(--danger)" onclick="deleteProduct(${p.id})">Delete</button>` : ''}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openAddProduct(){
+      modalMode = "add";
+      editingId = null;
+      byId("modalName").value = "";
+      byId("modalCategory").value = "grains";
+      byId("modalPrice").value = "";
+      byId("modalWeight").value = "";
+      byId("modalImage").value = "";
+      openModal();
+    }
+
+    function openEdit(id){
+      const p = products.find(x => x.id === id);
+      if(!p){ alert("Product not found"); return; }
+      modalMode = "edit";
+      editingId = id;
+      byId("modalName").value = p.name;
+      byId("modalCategory").value = p.category || "misc";
+      byId("modalPrice").value = p.price;
+      byId("modalWeight").value = p.weight;
+      byId("modalImage").value = p.img || "";
+      openModal();
+    }
+
+    function saveModalProduct(){
+      const name = byId("modalName").value.trim();
+      const category = byId("modalCategory").value;
+      const price = Number(byId("modalPrice").value || 0);
+      const weight = byId("modalWeight").value.trim();
+      const img = byId("modalImage").value.trim();
+
+      if(!name || !price || !weight){ alert("Please fill name, price and weight"); return; }
+
+      if(modalMode === "add"){
+        const id = Date.now();
+        products.push({ id, name, category, price, weight, img });
+      } else if(modalMode === "edit"){
+        const p = products.find(x => x.id === editingId);
+        if(!p){ alert("Edit failed: product missing"); return; }
+        p.name = name; p.category = category; p.price = price; p.weight = weight; p.img = img;
+      }
+
+      saveProducts();
+      closeModal();
+      renderProducts();
+    }
+
+    function deleteProduct(id){
+      if(!confirm("Delete product?")) return;
+      products = products.filter(x => x.id !== id);
+      saveProducts();
+      renderProducts();
+    }
+
+    // ---------- modal helpers ----------
+    function openModal(){ byId("modalBackdrop").style.display = "flex"; byId("modalBackdrop").setAttribute("aria-hidden","false"); }
+    function closeModal(){ byId("modalBackdrop").style.display = "none"; byId("modalBackdrop").setAttribute("aria-hidden","true"); }
+
+    // ---------- search & filters ----------
+    function filterProducts(){
+      const q = byId("searchInput").value.trim().toLowerCase();
+      const filtered = products.filter(p => p.name.toLowerCase().includes(q) || (p.category||"").toLowerCase().includes(q));
+      renderProducts(filtered);
+    }
+    function filterCategory(cat, el){
+      document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+      if(el) el.classList.add('active');
+      if(cat === 'all') renderProducts();
+      else renderProducts(products.filter(p=>p.category === cat));
+    }
+
+    // ---------- demo data loader ----------
+    function loadDemoData(){
+      if(!confirm('Load demo product list? This will overwrite your current catalog.')) return;
+      products = DEMO_PRODUCTS.slice();
+      saveProducts();
+      renderProducts();
+    }
+
+    // ---------- CART ----------
+    function saveCart(){ localStorage.setItem("kp_cart", JSON.stringify(cart)); }
+    function addToCart(id){
+      const p = products.find(x => x.id === id);
+      if(!p) return;
+      const found = cart.find(x => x.id === id);
+      if(found) found.qty += 1; else cart.push({...p, qty:1});
+      saveCart();
+      renderCart();
+    }
+
+    function renderCart(){
+      const list = byId("cartList");
+      list.innerHTML = "";
+      if(cart.length === 0){
+        list.innerHTML = '<div class="text-center muted">Cart empty — add items</div>';
+        updateCartTotal();
+        return;
+      }
+      cart.forEach((c, idx) => {
+        const item = document.createElement("div");
+        item.className = "cart-item";
+        item.innerHTML = `
+          <div style="flex:1">
+            <div style="font-weight:700">${c.name}</div>
+            <div class="small muted">${c.weight} • ${fmt(c.price)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="qty">
+              <button onclick="changeQty(${c.id}, -1)">−</button>
+              <div style="min-width:26px;text-align:center">${c.qty}</div>
+              <button onclick="changeQty(${c.id}, 1)">+</button>
+            </div>
+            <div style="width:10px"></div>
+            <div style="font-weight:800">${fmt(c.qty * c.price)}</div>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+      updateCartTotal();
+    }
+
+    function changeQty(id, delta){
+      const item = cart.find(c => c.id === id);
+      if(!item) return;
+      item.qty += delta;
+      if(item.qty <= 0) cart = cart.filter(c => c.id !== id);
+      saveCart();
+      renderCart();
+    }
+
+    function clearCart(){
+      if(!confirm('Clear cart?')) return;
+      cart = [];
+      saveCart();
+      renderCart();
+    }
+
+    function updateCartTotal(){
+      const total = cart.reduce((s,i)=> s + i.qty * i.price, 0);
+      byId("cartTotal").innerText = fmt(total);
+    }
+
+    // ---------- CHECKOUT / BILLS ----------
+    function checkout(){
+      const customer = byId("customerName").value.trim();
+      if(!customer){ alert('Enter customer name before checkout'); return; }
+      if(cart.length === 0){ alert('Cart empty'); return; }
+
+      const payment = byId("paymentType").value;
+      const subtotal = cart.reduce((s,i)=> s + i.qty * i.price, 0);
+      const discount = 0; // later add discounts
+      const total = subtotal - discount;
+
+      const bill = {
+        id: 'B' + Date.now(),
+        customer,
+        items: cart.map(i=> ({ id:i.id, name:i.name, qty:i.qty, price:i.price, weight:i.weight })),
+        subtotal, discount, total,
+        payment, date: new Date().toLocaleString()
+      };
+
+      bills.unshift(bill);
+      if(bills.length > 100) bills.pop();
+      localStorage.setItem("kp_bills", JSON.stringify(bills));
+
+      // clear cart, save
+      cart = [];
+      saveCart();
+      renderCart();
+
+      // update recent bills and history
+      renderRecentBills();
+      renderBillHistory();
+
+      // prepare receipt and open preview
+      renderReceipt(bill);
+      openBillPreview();
+
+      // clear customer input
+      byId("customerName").value = "";
+    }
+
+    // ---------- RECENT BILLS / HISTORY ----------
+    function renderRecentBills(){
+      const el = byId("recentBills");
+      el.innerHTML = "";
+      if(bills.length === 0) { el.innerText = "No bills yet."; return; }
+      bills.slice(0,6).forEach(b=>{
+        const row = document.createElement("div");
+        row.className = "bill-row";
+        row.style.marginBottom = "8px";
+        row.innerHTML = `<div style="display:flex;justify-content:space-between"><div><strong>${b.customer}</strong><div class="small muted">${b.date}</div></div><div style="text-align:right">${fmt(b.total)}</div></div>`;
+        el.appendChild(row);
+      });
+    }
+
+    function renderBillHistory(){
+      // if you later implement a full history page, render bills array here
+      // For now we reuse recent bills container
+      renderRecentBills();
+    }
+
+    // ---------- RECEIPT RENDER / PRINT ----------
+    function renderReceipt(bill){
+      byId("recNo").innerText = bill.id;
+      byId("recDate").innerText = bill.date;
+      byId("recCustomer").innerText = "Customer: " + bill.customer;
+      const itemsEl = byId("recItems");
+      itemsEl.innerHTML = "";
+      bill.items.forEach(i=>{
+        const div = document.createElement("div");
+        div.style.display = "flex";
+        div.style.justifyContent = "space-between";
+        div.style.padding = "6px 0";
+        div.innerHTML = `<div>${i.name} (${i.weight}) x ${i.qty}</div><div>${fmt(i.price * i.qty)}</div>`;
+        itemsEl.appendChild(div);
+      });
+      byId("recSub").innerText = fmt(bill.subtotal);
+      byId("recDisc").innerText = fmt(bill.discount);
+      byId("recTotal").innerText = fmt(bill.total);
+    }
+
+    function openBillPreview(){ byId("billPreviewBackdrop").style.display = "flex"; byId("billPreviewBackdrop").setAttribute("aria-hidden","false"); }
+    function closeBillPreview(){ byId("billPreviewBackdrop").style.display = "none"; byId("billPreviewBackdrop").setAttribute("aria-hidden","true"); }
+    function printReceipt(){ window.print(); }
+
+    // ---------- INIT: render initial UI ----------
+    function init(){
+      byId("year").innerText = new Date().getFullYear();
+      // ensure localStorage seeds exist
+      if(!localStorage.getItem("kp_users")) localStorage.setItem("kp_users", JSON.stringify(USERS));
+      if(!localStorage.getItem("kp_products")) localStorage.setItem("kp_products", JSON.stringify(products));
+      if(!localStorage.getItem("kp_cart")) localStorage.setItem("kp_cart", JSON.stringify(cart));
+      if(!localStorage.getItem("kp_bills")) localStorage.setItem("kp_bills", JSON.stringify(bills));
+      // render if already logged in (rare for this demo)
+      renderProducts();
+      renderCart();
+      renderRecentBills();
+    }
+
+    // run init
+    init();
+
+    // make functions accessible in global scope for onclick handlers
+    window.doLogin = doLogin;
+    window.fillDemoLogin = fillDemoLogin;
+    window.openAddProduct = openAddProduct;
+    window.loadDemoData = loadDemoData;
+    window.openEdit = openEdit;
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+    window.saveModalProduct = saveModalProduct;
+    window.deleteProduct = deleteProduct;
+    window.renderProducts = renderProducts;
+    window.addToCart = addToCart;
+    window.renderCart = renderCart;
+    window.changeQty = changeQty;
+    window.clearCart = clearCart;
+    window.checkout = checkout;
+    window.openBillPreview = openBillPreview;
+    window.closeBillPreview = closeBillPreview;
+    window.printReceipt = printReceipt;
+    window.filterProducts = filterProducts;
+    window.filterCategory = filterCategory;
+    window.logout = logout;
+    window.fillDemoLogin = fillDemoLogin;
+
+  </script>
+</body>
+</html>
