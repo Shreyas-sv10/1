@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Keerana Pro — Kirana POS</title>
+
+  <!-- ======= Embedded CSS (use as-is or extract to style.css) ======= -->
+  <style>
+    :root{
+      --bg-1: #eef6f8;
+      --bg-2: #f4f7fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --text: #0f172a;
+      --accent: #0ea5a4;
+      --accent-dark: #057f7d;
+      --danger: #ef4444;
+      --glass: rgba(255,255,255,0.62);
+      --shadow-1: 0 6px 18px rgba(13, 38, 59, 0.06);
+      --shadow-2: 0 12px 30px rgba(2,6,23,0.08);
+      --radius: 12px;
+      --transition: 180ms cubic-bezier(.2,.9,.3,1);
+      --max-width: 1200px;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      -webkit-font-smoothing:antialiased;
+      color:var(--text);
+      background: linear-gradient(180deg,var(--bg-1) 0%,var(--bg-2) 100%);
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+      font-size:14px;
+      line-height:1.36;
+    }
+
+    /* General container */
+    .topbar{
+      display:flex;justify-content:space-between;align-items:center;padding:14px 18px;position:sticky;top:0;background:transparent;z-index:80;border-bottom:1px solid rgba(15,23,42,0.03);backdrop-filter: blur(6px);
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#60a5fa);display:flex;align-items:center;justify-content:center;color:white;font-weight:800}
+    .brand h1{font-size:18px;margin:0}
+    .brand p{font-size:12px;color:var(--muted);margin:0}
+
+    .container{width:100%;max-width:var(--max-width);margin:18px auto;padding:0 18px;display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start}
+    @media (max-width:980px){.container{grid-template-columns:1fr}}
+
+    /* login page */
+    #login-page{max-width:420px;margin:60px auto;background:var(--card);padding:28px;border-radius:14px;box-shadow:var(--shadow-2);text-align:center}
+    #login-page h2{margin-bottom:8px}
+    .form-group{margin:12px 0;text-align:left}
+    .form-group label{display:block;margin-bottom:6px;color:var(--muted)}
+    input[type="text"],input[type="password"],select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(12,20,30,0.06);outline:none;background:white}
+    .btn{padding:10px 14px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    .btn-primary{background:var(--accent);color:white}
+    .btn-ghost{background:transparent;border:1px solid rgba(15,23,42,0.06);color:var(--muted)}
+    .small{font-size:13px}
+
+    /* layout left and right */
+    .main{min-height:60vh}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+    .search{flex:1;display:flex;gap:8px;padding:8px;border-radius:10px;background:var(--card);box-shadow:var(--shadow-1);align-items:center}
+    .search input{border:0;outline:none;padding:8px;font-size:14px;width:100%}
+    .category-list{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+    .chip{padding:8px 12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04);background:transparent;color:var(--muted);cursor:pointer}
+    .chip.active{background:var(--accent);color:white;border-color:transparent;box-shadow:var(--shadow-1)}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+    .card{background:var(--card);border-radius:14px;padding:12px;box-shadow:var(--shadow-1);display:flex;flex-direction:column;gap:10px;min-height:170px;position:relative;overflow:hidden}
+    .card:hover{transform:translateY(-6px);box-shadow:var(--shadow-2);transition:transform var(--transition),box-shadow var(--transition)}
+    .card .img{height:96px;border-radius:10px;background:linear-gradient(180deg,#fff,#f0f7ff);display:flex;align-items:center;justify-content:center;border:1px solid rgba(15,23,42,0.03)}
+    .card img{max-width:100%;max-height:88px;border-radius:8px}
+    .card h3{font-size:16px;margin:0}
+    .meta{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px}
+    .price{font-weight:800;font-size:16px}
+    .badge{position:absolute;top:10px;left:10px;padding:6px 8px;border-radius:8px;font-size:12px;color:white;background:var(--accent-dark)}
+    .actions{display:flex;gap:8px;margin-top:auto;flex-wrap:wrap}
+
+    .aside{position:sticky;top:84px;align-self:start}
+    .cart{background:linear-gradient(180deg,var(--glass),rgba(255,255,255,0.9));padding:14px;border-radius:14px;box-shadow:var(--shadow-1);backdrop-filter: blur(6px)}
+    .cart h4{margin:0 0 8px 0}
+    .cart-list{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;padding-right:4px}
+    .cart-item{display:flex;justify-content:space-between;align-items:center;gap:8px;background:white;padding:8px;border-radius:8px;box-shadow:0 2px 8px rgba(12,20,30,0.04)}
+    .qty{display:flex;align-items:center;gap:6px}
+    .qty button{width:28px;height:28px;border-radius:6px;border:0;background:#eef2f7;cursor:pointer;font-weight:700}
+    .cart-footer{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .total{display:flex;justify-content:space-between;font-weight:800;font-size:18px}
+    .checkout{display:flex;gap:8px;align-items:center}
+
+    .card-sm{background:var(--card);padding:12px;border-radius:12px;box-shadow:var(--shadow-1)}
+    .recent-bills .bill-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed rgba(15,23,42,0.04)}
+
+    .modal-backdrop{position:fixed;inset:0;background:rgba(7,12,20,0.45);display:none;align-items:center;justify-content:center;z-index:200}
+    .modal{width:720px;max-width:95%;background:var(--card);border-radius:12px;padding:18px;box-shadow:0 20px 50px rgba(2,6,23,0.28);animation:popIn .18s ease}
+    @keyframes popIn{from{transform:translateY(8px) scale(.99);opacity:0}to{transform:none;opacity:1}}
+    .modal label{display:block;margin-bottom:6px;font-size:13px;color:var(--muted)}
+    .modal input[type="text"], .modal input[type="number"], .modal select {width:100%;padding:10px;border-radius:8px;border:1px solid rgba(12,20,30,0.06);background:transparent;font-size:14px;outline:none}
+
+    .receipt{background:linear-gradient(180deg,#fff,#fbfdff);padding:16px;border-radius:8px;border:1px solid rgba(12,20,30,0.04);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Courier New", monospace;color:#0f172a}
+    .receipt .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .receipt .items{border-top:1px dashed rgba(12,20,30,0.06);margin-top:8px;padding-top:8px}
+    .receipt .items div{padding:6px 0}
+    .receipt .total-line{display:flex;justify-content:space-between;font-weight:800;margin-top:8px}
+
+    @media print{
+      body *{visibility:hidden}
+      #receipt, #receipt *{visibility:visible}
+      #receipt{position:fixed;left:0;top:0;width:100%}
+      .modal-backdrop{display:none !important}
+    }
+
+    .hidden{display:none !important}
+    .muted{color:var(--muted)}
+    .text-center{text-align:center}
+    .small{font-size:13px}
+
+    /* small utilities */
+    .flex{display:flex;align-items:center;gap:8px}
+    .form-row{display:flex;gap:10px}
+    .form-row .col{flex:1}
+    @media (max-width:720px){.grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.container{padding:0 12px}}
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">KS</div>
+      <div>
+        <h1>Keerana Pro</h1>
+        <p class="small muted">Smart Kirana POS — clean bills, fast service</p>
+      </div>
+    </div>
+
+    <div class="flex">
+      <div class="small muted">User: <strong id="userBadge">guest</strong></div>
+      <button class="btn btn-ghost" onclick="openBillPreview()">Preview Bill</button>
+    </div>
+  </header>
+
+  <!-- LOGIN PAGE -->
+  <main id="login-page">
+    <h2>Keerana Shop — Login</h2>
+    <p class="small muted">Use the demo credentials or create accounts in code</p>
+
+    <div class="form-group">
+      <label for="userid">User ID</label>
+      <input id="userid" type="text" placeholder="admin or staff">
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input id="password" type="password" placeholder="1234">
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+      <button class="btn btn-primary" onclick="doLogin()">Login</button>
+      <button class="btn btn-ghost" onclick="fillDemoLogin()">Demo</button>
+    </div>
+    <p id="login-error" class="small muted" style="color:crimson;margin-top:10px"></p>
+  </main>
+
+  <!-- APP (hidden until login) -->
+  <section id="app" class="hidden" style="width:100%;flex:1;display:flex;flex-direction:column">
+    <div class="container">
+      <!-- LEFT: products -->
+      <section class="main">
+        <div class="controls">
+          <div class="search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.35-4.35" stroke="#94a3b8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="6" stroke="#94a3b8" stroke-width="1.6"/></svg>
+            <input id="searchInput" placeholder="Search product or category..." oninput="filterProducts()" />
+          </div>
+
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="openAddProduct()">+ Add Product</button>
+            <button class="btn btn-ghost" onclick="loadDemoData()">Load Demo</button>
+            <button class="btn btn-ghost" onclick="logout()">Logout</button>
+          </div>
+        </div>
+
+        <div class="category-list" style="margin-bottom:12px">
+          <div class="chip active" onclick="filterCategory('all', this)">All</div>
+          <div class="chip" onclick="filterCategory('grains', this)">Grains</div>
+          <div class="chip" onclick="filterCategory('pulses', this)">Pulses</div>
+          <div class="chip" onclick="filterCategory('spices', this)">Spices</div>
+          <div class="chip" onclick="filterCategory('oils', this)">Oils</div>
+        </div>
+
+        <div id="productsGrid" class="grid" aria-live="polite">
+          <!-- product cards rendered by JS -->
+        </div>
+
+        <div style="margin-top:18px" class="card-sm">
+          <h3 style="margin:0 0 8px 0">Tips & Notes</h3>
+          <p class="small muted">This app stores data in your browser (localStorage). To connect a DBMS later, replace localStorage actions with API calls (fetch to your backend).</p>
+        </div>
+      </section>
+
+      <!-- RIGHT: cart -->
+      <aside class="aside">
+        <div class="cart">
+          <h4>Cart</h4>
+
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+            <div style="flex:1">
+              <label class="small muted">Customer name</label>
+              <input id="customerName" placeholder="e.g., Ravi" />
+            </div>
+            <div style="width:110px">
+              <label class="small muted">Payment</label>
+              <select id="paymentType">
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="card">Card</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="cartList" class="cart-list">
+            <div class="text-center muted">Cart empty — add items</div>
+          </div>
+
+          <div class="cart-footer">
+            <div class="total">
+              <div>Total</div>
+              <div id="cartTotal">₹0.00</div>
+            </div>
+            <div class="checkout">
+              <button class="btn btn-ghost" onclick="clearCart()">Clear</button>
+              <button class="btn btn-primary" onclick="checkout()">Checkout</button>
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:var(--muted)">Tip: Edit product to change price or weight permanently.</div>
+          </div>
+        </div>
+
+        <div style="height:16px"></div>
+
+        <div class="card-sm" style="padding:12px">
+          <h4 style="margin:0 0 8px 0">Recent Bills</h4>
+          <div id="recentBills" class="recent-bills muted small">No bills yet.</div>
+        </div>
+      </aside>
+    </div>
+
+    <footer style="margin-top:auto;padding:18px 0;text-align:center;color:var(--muted);font-size:13px">
+      © <span id="year"></span> Keerana Pro • Built for Shreyas
+    </footer>
+  </section>
+
+  <!-- MODAL (Add/Edit product) -->
+  <div id="modalBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div id="productModal">
+        <h3 id="modalTitle">Add / Edit Product</h3>
+        <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px">
+            <label>Name</label>
+            <input id="modalName" type="text" placeholder="e.g., Basmati Rice" />
+            <label style="margin-top:8px">Category</label>
+            <select id="modalCategory">
+              <option value="grains">Grains</option>
+              <option value="pulses">Pulses</option>
+              <option value="spices">Spices</option>
+              <option value="oils">Oils</option>
+              <option value="misc">Misc</option>
+            </select>
+          </div>
+
+          <div style="width:220px;min-width:200px">
+            <label>Price (₹)</label>
+            <input id="modalPrice" type="number" step="0.01" placeholder="50.00" />
+            <label style="margin-top:8px">Weight / Unit</label>
+            <input id="modalWeight" type="text" placeholder="1 kg / 500 g" />
+            <label style="margin-top:8px">Image URL (optional)</label>
+            <input id="modalImage" type="text" placeholder="https://..." />
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveModalProduct()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BILL PREVIEW / RECEIPT -->
+  <div id="billPreviewBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" style="max-width:900px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Bill Preview</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="print-btn" onclick="printReceipt()">Print / Save PDF</button>
+          <button class="btn btn-ghost" onclick="closeBillPreview()">Close</button>
+        </div>
+      </div>
+
+      <div id="receiptContainer" style="margin-top:12px">
+        <div id="receipt" class="receipt">
+          <div class="head">
+            <div>
+              <h4 style="margin:0">Keerana Shop</h4>
+              <div class="small muted">123 Market Road, YourTown</div>
+            </div>
+            <div style="text-align:right">
+              <div class="small">Bill No: <span id="recNo">-</span></div>
+              <div class="small">Date: <span id="recDate">-</span></div>
+            </div>
+          </div>
+
+          <div id="recCustomer" class="small muted">Customer: -</div>
+
+          <div class="items" id="recItems">
+            <div style="display:flex;justify-content:space-between;padding:6px 0">
+              <div class="small muted">No items in bill</div>
+            </div>
+          </div>
+
+          <div class="total-line">
+            <div>Subtotal</div>
+            <div id="recSub">₹0.00</div>
+          </div>
+          <div class="total-line">
+            <div>Discount</div>
+            <div id="recDisc">₹0.00</div>
+          </div>
+          <div class="total-line" style="font-size:18px;margin-top:8px">
+            <div>Total</div>
+            <div id="recTotal">₹0.00</div>
+          </div>
+
+          <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+            Thank you for shopping! Visit again.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======= SCRIPT: full features, localStorage-backed ======= -->
+  <script>
+    /* =======================================================
+       Single-file JS for Keerana Pro
+       - Login (admin/staff)
+       - Products add/edit/delete (admin only for delete/edit)
+       - Cart (qty controls)
+       - Customer & history
+       - Bill generation & print
+       - localStorage persistence
+       ======================================================= */
+
+    // ---------- Demo users ----------
+    const DEMO_USERS = [
+      { id: 1, username: "admin", password: "1234", role: "admin" },
+      { id: 2, username: "staff", password: "0000", role: "staff" }
+    ];
+
+    // ---------- Demo product data ----------
+    const DEMO_PRODUCTS = [
+      { id: 1, name: "Basmati Rice (5kg)", price: 420, weight: "5 kg", category: "grains", img: "" },
+      { id: 2, name: "Wheat Atta (10kg)", price: 760, weight: "10 kg", category: "grains", img: "" },
+      { id: 3, name: "Toor Dal (1kg)", price: 120, weight: "1 kg", category: "pulses", img: "" },
+      { id: 4, name: "Turmeric Powder (200g)", price: 65, weight: "200 g", category: "spices", img: "" },
+      { id: 5, name: "Mustard Oil (1L)", price: 180, weight: "1 L", category: "oils", img: "" }
+    ];
+
+    // ---------- App state (persisted to localStorage) ----------
+    let USERS = JSON.parse(localStorage.getItem("kp_users")) || DEMO_USERS.slice();
+    let products = JSON.parse(localStorage.getItem("kp_products")) || DEMO_PRODUCTS.slice();
+    let cart = JSON.parse(localStorage.getItem("kp_cart")) || [];
+    let bills = JSON.parse(localStorage.getItem("kp_bills")) || [];
+
+    // Current runtime state
+    let currentUser = null;
+    let modalMode = "add"; // 'add' or 'edit'
+    let editingId = null;
+
+    // Helpers
+    const fmt = v => "₹" + Number(v).toFixed(2);
+    const byId = id => document.getElementById(id);
+
+    // ---------- LOGIN FLOW ----------
+    function doLogin(){
+      const u = byId("userid").value.trim();
+      const p = byId("password").value.trim();
+      const found = USERS.find(x => x.username === u && x.password === p);
+      if(!found){
+        byId("login-error").innerText = "Invalid credentials — try admin/1234 or staff/0000";
+        return;
+      }
+      currentUser = found;
+      // Switch UI
+      byId("login-page").classList.add("hidden");
+      byId("app").classList.remove("hidden");
+      byId("userBadge").innerText = currentUser.username + " (" + currentUser.role + ")";
+      // render
+      renderProducts();
+      renderCart();
+      renderRecentBills();
+      renderBillHistory();
+      // clear login inputs
+      byId("userid").value = "";
+      byId("password").value = "";
+      byId("login-error").innerText = "";
+    }
+
+    function fillDemoLogin(){
+      byId("userid").value = "admin";
+      byId("password").value = "1234";
+      byId("login-error").innerText = "";
+    }
+
+    function logout(){
+      currentUser = null;
+      byId("app").classList.add("hidden");
+      byId("login-page").classList.remove("hidden");
+      byId("userBadge").innerText = "guest";
+    }
+
+    // ---------- PRODUCTS: render / add / edit / delete ----------
+    function saveProducts(){
+      localStorage.setItem("kp_products", JSON.stringify(products));
+    }
+
+    function renderProducts(list = products){
+      const grid = byId("productsGrid");
+      grid.innerHTML = "";
+      if(!list.length){
+        grid.innerHTML = "<div class='card text-center muted'>No products found</div>";
+        return;
+      }
+      list.forEach(p => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.setAttribute("data-id", p.id);
+        card.innerHTML = `
+          <d
